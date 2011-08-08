@@ -14,8 +14,8 @@ MeadowやNTEmacsから呼び出して使うために作りました。
 
 * Supported File Formats
 
- .wav (WAVE_FORMAT_PCM only)
- .ogg
+- .wav (WAVE_FORMAT_PCM only)
+- .ogg
 
 * Commands
 
