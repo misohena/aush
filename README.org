@@ -12,6 +12,12 @@ MeadowやNTEmacsから呼び出して使うために作りました。
 ため、これも使うのを諦めました。
 なので最終的に自分で必要なものだけを作ることにしました。
 
+* Download
+
+コンパイル済みバイナリファイルは次の場所においてあります。
+
+[[https://github.com/misohena/aush/raw/master/release/aush.zip]]
+
 * Supported File Formats
 
 - .wav (WAVE_FORMAT_PCM only)
