@@ -1,0 +1,117 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="ソース ファイル">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="ヘッダー ファイル">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="リソース ファイル">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="dsound">
+      <UniqueIdentifier>{34de734f-9e16-42a8-8993-d42164b184e3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="audioproc">
+      <UniqueIdentifier>{68370a13-a24c-4157-8b0e-e364255c79a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="util">
+      <UniqueIdentifier>{026e5def-436f-4ab3-88b0-3417aad07c6c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\main.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\dsound\ByteWaveReader.cpp">
+      <Filter>dsound</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\dsound\DirectSound.cpp">
+      <Filter>dsound</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\dsound\OggFileReader.cpp">
+      <Filter>dsound</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\dsound\PitchShiftWaveReader.cpp">
+      <Filter>dsound</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\dsound\PlainWavFileReader.cpp">
+      <Filter>dsound</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\dsound\StreamSoundBuffer.cpp">
+      <Filter>dsound</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\dsound\ThreadPool.cpp">
+      <Filter>dsound</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\util\CmdLineSplitter.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\util\NativeString.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\util\PathString.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\dsound\ByteWaveReader.h">
+      <Filter>dsound</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\dsound\CriticalSection.h">
+      <Filter>dsound</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\dsound\DirectSound.h">
+      <Filter>dsound</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\dsound\OggFileReader.h">
+      <Filter>dsound</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\dsound\PitchShiftWaveReader.h">
+      <Filter>dsound</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\dsound\PlainWavFileReader.h">
+      <Filter>dsound</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\dsound\SoundBuffer.h">
+      <Filter>dsound</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\dsound\StreamSoundBuffer.h">
+      <Filter>dsound</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\dsound\ThreadPool.h">
+      <Filter>dsound</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\dsound\WaveReader.h">
+      <Filter>dsound</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\util\CmdLineSplitter.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\util\HeapArray.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\util\NativeString.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\util\PathString.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\audioproc\fftsg.h">
+      <Filter>audioproc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\audioproc\Multiplex.h">
+      <Filter>audioproc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\audioproc\Resample.h">
+      <Filter>audioproc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\audioproc\SmbPitchShift.h">
+      <Filter>audioproc</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
