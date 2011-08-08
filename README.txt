@@ -1,1 +1,66 @@
 Console Audio Shell
+
+* 概要
+
+標準入力からのコマンドで操作するオーディオプレイヤーです。
+Windows上で動作します。
+
+MeadowやNTEmacsから呼び出して使うために作りました。
+最初はMeadowのMCI機能(mw32mci.el)を使っていたのですが、再生停止時の通知
+機能にいくつか気になるところがあったのでやめました。
+次にMPlayerを使ってみたのですが、音の最後が途切れてしまう現象に遭遇した
+ため、これも使うのを諦めました。
+なので最終的に自分で必要なものだけを作ることにしました。
+
+* Supported File Formats
+
+ .wav (WAVE_FORMAT_PCM only)
+ .ogg
+
+* Commands
+
+ open <filename>
+ close
+ play
+ stop
+ begin
+ speed <0.5~2.0>
+ quit
+
+* 使い方
+
+aush.exeを実行し、コマンドを入力して下さい。
+
+オーディオファイルを開くには「open ファイル名」、
+開いたファイルを再生するには「play」です。
+再生が終わったら「stopped.」と出力されます(コマンドで止めた場合を除く)。
+
+* aush.el
+
+aush.elはEmacsからaushを制御するライブラリです。
+次に使用例を挙げます。
+
+ライブラリをロード:
+ (require 'aush)
+
+hoge.wavを再生:
+ (aush-sound-open "hoge.wav")
+ (aush-sound-play)
+
+サウンドを止める:
+ (aush-sound-stop)
+
+止めたところから再開する:
+ (aush-sound-play)
+
+サウンドの先頭へシーク:
+ (aush-sound-seekbeg)
+
+サウンドの再生が終わったら関数を呼び出す:
+ (aush-set-callback-stopped (lambda () (message "stopped.")))
+ (aush-sound-play)
+
+ NOTE: aush-sound-stopやaush-sound-close、aush-sound-openで止めた場合は呼び出されません。
+
+サウンドを閉じる:
+ (aush-sound-close)
