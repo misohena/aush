@@ -19,13 +19,13 @@ MeadowやNTEmacsから呼び出して使うために作りました。
 
 * Commands
 
- open <filename>
- close
- play
- stop
- begin
- speed <0.5~2.0>
- quit
+- open <filename>
+- close
+- play
+- stop
+- begin
+- speed <0.5~2.0>
+- quit
 
 * 使い方
 
@@ -41,26 +41,28 @@ aush.elはEmacsからaushを制御するライブラリです。
 次に使用例を挙げます。
 
 ライブラリをロード:
- (require 'aush)
+ : (require 'aush)
 
 hoge.wavを再生:
- (aush-sound-open "hoge.wav")
- (aush-sound-play)
+ : (aush-sound-open "hoge.wav")
+ : (aush-sound-play)
 
 サウンドを止める:
- (aush-sound-stop)
+ : (aush-sound-stop)
 
 止めたところから再開する:
- (aush-sound-play)
+ : (aush-sound-play)
 
 サウンドの先頭へシーク:
- (aush-sound-seekbeg)
+ : (aush-sound-seekbeg)
 
 サウンドの再生が終わったら関数を呼び出す:
- (aush-set-callback-stopped (lambda () (message "stopped.")))
- (aush-sound-play)
+ : (aush-set-callback-stopped (lambda () (message "stopped.")))
+ : (aush-sound-play)
 
  NOTE: aush-sound-stopやaush-sound-close、aush-sound-openで止めた場合は呼び出されません。
 
 サウンドを閉じる:
- (aush-sound-close)
+ : (aush-sound-close)
+
+#+LANGUAGE: ja
