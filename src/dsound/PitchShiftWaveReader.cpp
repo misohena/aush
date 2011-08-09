@@ -4,6 +4,7 @@
  * @since 2011-08-05
  */
 #include <algorithm>
+#include <limits>
 #include <boost/cstdint.hpp>
 #include "../audioproc/SmbPitchShift.h"
 #include "../audioproc/Multiplex.h"
@@ -56,12 +57,12 @@ void PitchShiftWaveReader::setResampleRatio(float resampleRatio)
 	}
 
 	const double num = std::floor(sourceNumSamples_ * resampleRatio);
-	if(!(num >= 0 && num <= UINT_MAX/3U)){
+	if(!(num >= 0 && num <= std::numeric_limits<WaveSize>::max()/4U/2U)){///@todo define MAX_WAVE_SIZE_SAMPLES constant.
 		return;
 	}
 
 	resampleRatio_ = resampleRatio;
-	outputNumSamples_ = static_cast<unsigned int>(num);
+	outputNumSamples_ = static_cast<WaveSize>(num);
 	if(outputPos_ > outputNumSamples_){
 		outputPos_ = outputNumSamples_;
 	}
@@ -125,7 +126,7 @@ bool PitchShiftWaveReader::read(void *dst, std::size_t size, std::size_t *actual
 	}
 
 	// pitch shift.
-	const unsigned int actualSrcSamples = actualSizeSrc / format_.blockAlign; //floor
+	const std::size_t actualSrcSamples = actualSizeSrc / format_.blockAlign; //floor
 
 	if(shiftRatio_ != 1.0f){
 		HeapArray<float> floatBuffer(actualSrcSamples);
@@ -148,7 +149,7 @@ bool PitchShiftWaveReader::read(void *dst, std::size_t size, std::size_t *actual
 	// resample.
 	if(resampler_){
 		assert(actualSrcSamples == reqSrcSamples);
-		unsigned int actualOutSamples = reqOutSamples;
+		std::size_t actualOutSamples = reqOutSamples;
 		if(actualSrcSamples != reqSrcSamples){
 			const std::size_t maxOutSamples = static_cast<std::size_t>(std::min(resampler_->calcMaxOutputSize(actualSrcSamples), static_cast<WaveSize>(reqOutSamples)));
 			if(actualOutSamples > maxOutSamples){

@@ -10,21 +10,21 @@ namespace aush{
 
     inline void demultiplex(float *dst, unsigned char *src,
                             unsigned int ch,
-                            unsigned int numSamples,
+                            std::size_t numSamples,
                             unsigned int numBlockAlign,
                             unsigned int bytesPerSample)
     {
         src += ch * bytesPerSample;
 
         if(bytesPerSample == 1){
-            for(unsigned int i = 0; i < numSamples; ++i){
+            for(std::size_t i = 0; i < numSamples; ++i){
                 *dst = (*src - 128) / 128.f;
                 ++dst;
                 src += numBlockAlign;
             }
         }
         else if(bytesPerSample == 2){
-            for(unsigned int i = 0; i < numSamples; ++i){
+            for(std::size_t i = 0; i < numSamples; ++i){
                 const int udata = src[0] | (src[1]<<8);
                 const int data = udata < 32768 ? udata : udata - 0x10000;
                 *dst = data / 32768.f;
@@ -36,14 +36,14 @@ namespace aush{
 
     inline void multiplex(unsigned char *dst, float *src,
                           unsigned int ch,
-                          unsigned int numSamples,
+                          std::size_t numSamples,
                           unsigned int numBlockAlign,
                           unsigned int bytesPerSample)
     {
         dst += ch * bytesPerSample;
 
         if(bytesPerSample == 1){
-            for(unsigned int i = 0; i < numSamples; ++i){
+            for(std::size_t i = 0; i < numSamples; ++i){
                 int data = static_cast<int>(*src * 128.f + 128);
                 if(data < 0){
                     data = 0;
@@ -57,7 +57,7 @@ namespace aush{
             }
         }
         else if(bytesPerSample == 2){
-            for(unsigned int i = 0; i < numSamples; ++i){
+            for(std::size_t i = 0; i < numSamples; ++i){
                 int data = static_cast<int>(*src * 32768.f);
                 if(data < -32768){
                     data = -32768;
