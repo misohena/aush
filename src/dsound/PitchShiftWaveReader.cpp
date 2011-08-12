@@ -136,7 +136,6 @@ bool PitchShiftWaveReader::read(void *dst, std::size_t size, std::size_t *actual
 			shifters_[ch]->smbPitchShift(
 				shiftRatio_,
 				actualSrcSamples,
-				fftFrameSize_,
 				fftOverlapFactor_,
 				static_cast<float>(format_.samplesPerSec),
 				floatBuffer.get(),

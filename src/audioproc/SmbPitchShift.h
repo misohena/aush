@@ -45,7 +45,10 @@
 #include <cmath>
 #include <vector>
 
-#define SMB_PITCH_SHIFT_USE_OOURA_FFT 1
+#define SMB_PITCH_SHIFT_USE_OOURA_RDFT 1 // use rdft() direct.
+#define SMB_PITCH_SHIFT_USE_OOURA_CDFT 0 // use cdft as smbFft()
+#define SMB_PITCH_SHIFT_USE_OOURA_FFT (SMB_PITCH_SHIFT_USE_OOURA_RDFT || SMB_PITCH_SHIFT_USE_OOURA_CDFT)
+
 #if SMB_PITCH_SHIFT_USE_OOURA_FFT
 #include "fftsg.h"
 #endif
@@ -54,44 +57,55 @@ namespace aush{
 
 struct SmbPitchShift
 {
-	unsigned int maxFrameLength;
-	std::vector<float> gInFIFO;//[maxFrameLength];
-	std::vector<float> gOutFIFO;//[maxFrameLength];
-	std::vector<float> gFFTworksp;//[2*maxFrameLength];
-	std::vector<float> gLastPhase;//[maxFrameLength/2+1];
-	std::vector<float> gSumPhase;//[maxFrameLength/2+1];
-	std::vector<float> gOutputAccum;//[2*maxFrameLength];
-	std::vector<float> gAnaFreq;//[maxFrameLength];
-	std::vector<float> gAnaMagn;//[maxFrameLength];
-	std::vector<float> gSynFreq;//[maxFrameLength];
-	std::vector<float> gSynMagn;//[maxFrameLength];
-	long gRover;
+	unsigned int fftFrameSize;
+	std::vector<float> gInFIFO;//[fftFrameSize];
+	std::vector<float> gOutFIFO;//[fftFrameSize];
+	std::vector<float> gFFTworksp;//[2*fftFrameSize] or [(fftFrameSize/2+1)*2];
+	std::vector<float> gLastPhase;//[fftFrameSize/2+1];
+	std::vector<float> gSumPhase;//[fftFrameSize/2+1];
+	std::vector<float> gOutputAccum;//[2*fftFrameSize];
+	std::vector<float> gAnaFreq;//[fftFrameSize];
+	std::vector<float> gAnaMagn;//[fftFrameSize];
+	std::vector<float> gSynFreq;//[fftFrameSize];
+	std::vector<float> gSynMagn;//[fftFrameSize];
+	unsigned int gRover;
 #if SMB_PITCH_SHIFT_USE_OOURA_FFT
 	std::vector<int> fftTemp;
 	std::vector<float> fftSinCos;
 #endif
+	std::vector<float> gWindow;//[fftFrameLength]
 
-	explicit SmbPitchShift(unsigned int maxFrameLength)
-			: maxFrameLength(maxFrameLength)
-			, gInFIFO(maxFrameLength)
-			, gOutFIFO(maxFrameLength)
-			, gFFTworksp(2*maxFrameLength)
-			, gLastPhase(maxFrameLength/2+1)
-			, gSumPhase(maxFrameLength/2+1)
-			, gOutputAccum(2*maxFrameLength)
-			, gAnaFreq(maxFrameLength)
-			, gAnaMagn(maxFrameLength)
-			, gSynFreq(maxFrameLength)
-			, gSynMagn(maxFrameLength)
+	explicit SmbPitchShift(unsigned int fftFrameSize)
+			: fftFrameSize(fftFrameSize)
+			, gInFIFO(fftFrameSize)
+			, gOutFIFO(fftFrameSize)
+#if SMB_PITCH_SHIFT_USE_OOURA_RDFT
+			, gFFTworksp((fftFrameSize/2+1)*2)
+#else
+			, gFFTworksp(2*fftFrameSize)
+#endif
+			, gLastPhase(fftFrameSize/2+1)
+			, gSumPhase(fftFrameSize/2+1)
+			, gOutputAccum(2*fftFrameSize)
+			, gAnaFreq(fftFrameSize)
+			, gAnaMagn(fftFrameSize)
+			, gSynFreq(fftFrameSize)
+			, gSynMagn(fftFrameSize)
 			, gRover(0)
 #if SMB_PITCH_SHIFT_USE_OOURA_FFT
-			, fftTemp(std::size_t(2+std::sqrt(double(maxFrameLength))+1))
-			, fftSinCos(maxFrameLength/2)
+			, fftTemp(std::size_t(2+std::sqrt(double(fftFrameSize))+1))
+			, fftSinCos(fftFrameSize/2)
 #endif
 	{
 #if SMB_PITCH_SHIFT_USE_OOURA_FFT
 		fftTemp[0] = 0;
 #endif
+		gWindow.reserve(fftFrameSize);
+		static const double M_PI = 3.14159265358979323846;
+		for (unsigned int k = 0; k < fftFrameSize; k++) {
+			//gWindow[k] =
+			gWindow.push_back(float( -.5*cos(2.*M_PI*(double)k/(double)fftFrameSize)+.5 ));
+		}
 	}
 
 	/*
@@ -101,28 +115,27 @@ struct SmbPitchShift
 	Author: (c)1999-2009 Stephan M. Bernsee <smb [AT] dspdimension [DOT] com>
 	*/
 	void smbPitchShift(float pitchShift,
-					   long numSampsToProcess,
-					   long fftFrameSize,
-					   long osamp,
+					   unsigned int numSampsToProcess,
+					   //long fftFrameSize,
+					   unsigned int osamp,
 					   float sampleRate,
 					   float *indata,
 					   float *outdata)
 	{
 		static const double M_PI = 3.14159265358979323846;
 		double magn, phase, tmp, window, real, imag;
-		double freqPerBin, expct;
-		long i,k, qpd, index, inFifoLatency, stepSize, fftFrameSize2;
 
 		/* set up some handy variables */
-		fftFrameSize2 = fftFrameSize/2;
-		stepSize = fftFrameSize/osamp;
-		freqPerBin = sampleRate/(double)fftFrameSize;
-		expct = 2.*M_PI*(double)stepSize/(double)fftFrameSize;
-		inFifoLatency = fftFrameSize-stepSize;
+		const unsigned int fftFrameSize2 = fftFrameSize/2;
+		const unsigned int stepSize = fftFrameSize/osamp;
+		const double freqPerBin = sampleRate/(double)fftFrameSize;
+		const double expct = 2.*M_PI*(double)stepSize/(double)fftFrameSize;
+		const unsigned int inFifoLatency = fftFrameSize-stepSize;
+
 		if (gRover == 0) gRover = inFifoLatency;
 
 		/* main processing loop */
-		for (i = 0; i < numSampsToProcess; i++){
+		for (unsigned int i = 0; i < numSampsToProcess; i++){
 
 			/* As long as we have not yet collected enough data just read in */
 			gInFIFO[gRover] = indata[i];
@@ -134,23 +147,41 @@ struct SmbPitchShift
 				gRover = inFifoLatency;
 
 				/* do windowing and re,im interleave */
-				for (k = 0; k < fftFrameSize;k++) {
-					window = -.5*cos(2.*M_PI*(double)k/(double)fftFrameSize)+.5;
+				for (unsigned int k = 0; k < fftFrameSize;k++) {
+					//window = -.5*cos(2.*M_PI*(double)k/(double)fftFrameSize)+.5;
+					window = gWindow[k];
+#if SMB_PITCH_SHIFT_USE_OOURA_RDFT
+					gFFTworksp[k] = static_cast<float>(gInFIFO[k] * window);
+#else
 					gFFTworksp[2*k] = static_cast<float>(gInFIFO[k] * window);
 					gFFTworksp[2*k+1] = 0.;
+#endif
 				}
 
 
 				/* ***************** ANALYSIS ******************* */
 				/* do transform */
+#if SMB_PITCH_SHIFT_USE_OOURA_RDFT
+				fftsg::rdft(fftFrameSize, 1, &gFFTworksp[0], &fftTemp[0], &fftSinCos[0]);
+				gFFTworksp[2*fftFrameSize2] = gFFTworksp[1]; //Real[fftFrameSize/2]
+				gFFTworksp[2*fftFrameSize2+1] = 0; //Imag[fftFrameSize/2] is always 0.
+				gFFTworksp[1] = 0; //Imag[0] is always 0.
+
+#else
 				smbFft(&gFFTworksp[0], fftFrameSize, -1);
+#endif
 
 				/* this is the analysis step */
-				for (k = 0; k <= fftFrameSize2; k++) {
+				for (unsigned int k = 0; k <= fftFrameSize2; k++) {
 
 					/* de-interlace FFT buffer */
+#if SMB_PITCH_SHIFT_USE_OOURA_RDFT
+					real = gFFTworksp[2*k];
+					imag = -gFFTworksp[2*k+1];
+#else
 					real = gFFTworksp[2*k];
 					imag = gFFTworksp[2*k+1];
+#endif
 
 					/* compute magnitude and phase */
 					magn = 2.*sqrt(real*real + imag*imag);
@@ -164,7 +195,7 @@ struct SmbPitchShift
 					tmp -= (double)k*expct;
 
 					/* map delta phase into +/- Pi interval */
-					qpd = static_cast<long>(tmp/M_PI);
+					long qpd = static_cast<long>(tmp/M_PI);
 					if (qpd >= 0) qpd += qpd&1;
 					else qpd -= qpd&1;
 					tmp -= M_PI*(double)qpd;
@@ -185,8 +216,8 @@ struct SmbPitchShift
 				/* this does the actual pitch shifting */
 				memset(&gSynMagn[0], 0, fftFrameSize*sizeof(float));
 				memset(&gSynFreq[0], 0, fftFrameSize*sizeof(float));
-				for (k = 0; k <= fftFrameSize2; k++) { 
-					index = static_cast<long>(k * pitchShift); //float to long
+				for (unsigned int k = 0; k <= fftFrameSize2; k++) { 
+					const unsigned int index = static_cast<unsigned int>(k * pitchShift); //float to long
 					if (index <= fftFrameSize2) { 
 						gSynMagn[index] += gAnaMagn[k]; 
 						gSynFreq[index] = gAnaFreq[k] * pitchShift; 
@@ -195,7 +226,7 @@ struct SmbPitchShift
 			
 				/* ***************** SYNTHESIS ******************* */
 				/* this is the synthesis step */
-				for (k = 0; k <= fftFrameSize2; k++) {
+				for (unsigned int k = 0; k <= fftFrameSize2; k++) {
 
 					/* get magnitude and true frequency from synthesis arrays */
 					magn = gSynMagn[k];
@@ -218,28 +249,44 @@ struct SmbPitchShift
 					phase = gSumPhase[k];
 
 					/* get real and imag part and re-interleave */
+#if SMB_PITCH_SHIFT_USE_OOURA_RDFT
+					gFFTworksp[2*k] = static_cast<float>(magn * cos(phase));
+					gFFTworksp[2*k+1] = -static_cast<float>(magn * sin(phase));
+#else
 					gFFTworksp[2*k] = static_cast<float>(magn * cos(phase));
 					gFFTworksp[2*k+1] = static_cast<float>(magn * sin(phase));
+#endif
 				} 
 
+#if SMB_PITCH_SHIFT_USE_OOURA_RDFT
+				gFFTworksp[1] = gFFTworksp[fftFrameSize2]; //R[fftFrameSize/2]
+				/* do inverse transform */
+				fftsg::rdft(fftFrameSize, -1, &gFFTworksp[0], &fftTemp[0], &fftSinCos[0]);
+#else
 				/* zero negative frequencies */
-				for (k = fftFrameSize+2; k < 2*fftFrameSize; k++) gFFTworksp[k] = 0.;
-
+				for (unsigned int k = fftFrameSize+2; k < 2*fftFrameSize; k++) gFFTworksp[k] = 0.;
 				/* do inverse transform */
 				smbFft(&gFFTworksp[0], fftFrameSize, 1);
+#endif
 
 				/* do windowing and add to output accumulator */ 
-				for(k=0; k < fftFrameSize; k++) {
-					window = -.5*cos(2.*M_PI*(double)k/(double)fftFrameSize)+.5;
-					gOutputAccum[k] += static_cast<float>( 2.*window*gFFTworksp[2*k]/(fftFrameSize2*osamp) );
+				for(unsigned int k=0; k < fftFrameSize; k++) {
+					//window = -.5*cos(2.*M_PI*(double)k/(double)fftFrameSize)+.5;
+					window = gWindow[k];
+#if SMB_PITCH_SHIFT_USE_OOURA_RDFT
+					const float rm = gFFTworksp[k];
+#else
+					const float rm = gFFTworksp[2*k];
+#endif
+					gOutputAccum[k] += static_cast<float>( 2.*window*rm/(fftFrameSize2*osamp) );
 				}
-				for (k = 0; k < stepSize; k++) gOutFIFO[k] = gOutputAccum[k];
+				for (unsigned int k = 0; k < stepSize; k++) gOutFIFO[k] = gOutputAccum[k];
 
 				/* shift accumulator */
 				std::memmove(&gOutputAccum[0], &gOutputAccum[0]+stepSize, fftFrameSize*sizeof(float));
 
 				/* move input FIFO */
-				for (k = 0; k < inFifoLatency; k++) gInFIFO[k] = gInFIFO[k+stepSize];
+				for (unsigned int k = 0; k < inFifoLatency; k++) gInFIFO[k] = gInFIFO[k+stepSize];
 			}
 		}
 	}
@@ -271,13 +318,15 @@ struct SmbPitchShift
 		return atan2(x, y);
 	}
 
-#if SMB_PITCH_SHIFT_USE_OOURA_FFT
+#if SMB_PITCH_SHIFT_USE_OOURA_CDFT
 
 	void smbFft(float *fftBuffer, long fftFrameSize, long sign)
 	{
 		fftsg::cdft<float>(2*fftFrameSize, sign, fftBuffer, &fftTemp[0], &fftSinCos[0]);
 	}
-#else
+#endif
+
+#if !SMB_PITCH_SHIFT_USE_OOURA_FFT
 	/* 
 	FFT routine, (C)1996 S.M.Bernsee. Sign = -1 is FFT, 1 is iFFT (inverse)
 	Fills fftBuffer[0...2*fftFrameSize-1] with the Fourier transform of the
