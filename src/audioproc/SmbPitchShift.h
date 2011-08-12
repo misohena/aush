@@ -43,7 +43,7 @@
 
 #include <cstring>
 #include <cmath>
-#include <boost/scoped_array.hpp>
+#include <vector>
 
 #define SMB_PITCH_SHIFT_USE_OOURA_FFT 1
 #if SMB_PITCH_SHIFT_USE_OOURA_FFT
@@ -55,49 +55,40 @@ namespace aush{
 struct SmbPitchShift
 {
 	unsigned int maxFrameLength;
-	boost::scoped_array<float> gInFIFO;//[maxFrameLength];
-	boost::scoped_array<float> gOutFIFO;//[maxFrameLength];
-	boost::scoped_array<float> gFFTworksp;//[2*maxFrameLength];
-	boost::scoped_array<float> gLastPhase;//[maxFrameLength/2+1];
-	boost::scoped_array<float> gSumPhase;//[maxFrameLength/2+1];
-	boost::scoped_array<float> gOutputAccum;//[2*maxFrameLength];
-	boost::scoped_array<float> gAnaFreq;//[maxFrameLength];
-	boost::scoped_array<float> gAnaMagn;//[maxFrameLength];
-	boost::scoped_array<float> gSynFreq;//[maxFrameLength];
-	boost::scoped_array<float> gSynMagn;//[maxFrameLength];
+	std::vector<float> gInFIFO;//[maxFrameLength];
+	std::vector<float> gOutFIFO;//[maxFrameLength];
+	std::vector<float> gFFTworksp;//[2*maxFrameLength];
+	std::vector<float> gLastPhase;//[maxFrameLength/2+1];
+	std::vector<float> gSumPhase;//[maxFrameLength/2+1];
+	std::vector<float> gOutputAccum;//[2*maxFrameLength];
+	std::vector<float> gAnaFreq;//[maxFrameLength];
+	std::vector<float> gAnaMagn;//[maxFrameLength];
+	std::vector<float> gSynFreq;//[maxFrameLength];
+	std::vector<float> gSynMagn;//[maxFrameLength];
 	long gRover;
 #if SMB_PITCH_SHIFT_USE_OOURA_FFT
-	boost::scoped_array<int> fftTemp;
-	boost::scoped_array<float> fftSinCos;
+	std::vector<int> fftTemp;
+	std::vector<float> fftSinCos;
 #endif
 
 	explicit SmbPitchShift(unsigned int maxFrameLength)
 			: maxFrameLength(maxFrameLength)
-			, gInFIFO(new float[maxFrameLength])
-			, gOutFIFO(new float[maxFrameLength])
-			, gFFTworksp(new float[2*maxFrameLength])
-			, gLastPhase(new float[maxFrameLength/2+1])
-			, gSumPhase(new float[maxFrameLength/2+1])
-			, gOutputAccum(new float[2*maxFrameLength])
-			, gAnaFreq(new float[maxFrameLength])
-			, gAnaMagn(new float[maxFrameLength])
-			, gSynFreq(new float[maxFrameLength])
-			, gSynMagn(new float[maxFrameLength])
+			, gInFIFO(maxFrameLength)
+			, gOutFIFO(maxFrameLength)
+			, gFFTworksp(2*maxFrameLength)
+			, gLastPhase(maxFrameLength/2+1)
+			, gSumPhase(maxFrameLength/2+1)
+			, gOutputAccum(2*maxFrameLength)
+			, gAnaFreq(maxFrameLength)
+			, gAnaMagn(maxFrameLength)
+			, gSynFreq(maxFrameLength)
+			, gSynMagn(maxFrameLength)
 			, gRover(0)
 #if SMB_PITCH_SHIFT_USE_OOURA_FFT
-			, fftTemp(new int[std::size_t(2+std::sqrt(double(maxFrameLength))+1)])
-			, fftSinCos(new float[maxFrameLength/2])
+			, fftTemp(std::size_t(2+std::sqrt(double(maxFrameLength))+1))
+			, fftSinCos(maxFrameLength/2)
 #endif
 	{
-		/* initialize our static arrays */
-		std::memset(gInFIFO.get(), 0, maxFrameLength*sizeof(float));
-		std::memset(gOutFIFO.get(), 0, maxFrameLength*sizeof(float));
-		std::memset(gFFTworksp.get(), 0, 2*maxFrameLength*sizeof(float));
-		std::memset(gLastPhase.get(), 0, (maxFrameLength/2+1)*sizeof(float));
-		std::memset(gSumPhase.get(), 0, (maxFrameLength/2+1)*sizeof(float));
-		std::memset(gOutputAccum.get(), 0, 2*maxFrameLength*sizeof(float));
-		std::memset(gAnaFreq.get(), 0, maxFrameLength*sizeof(float));
-		std::memset(gAnaMagn.get(), 0, maxFrameLength*sizeof(float));
 #if SMB_PITCH_SHIFT_USE_OOURA_FFT
 		fftTemp[0] = 0;
 #endif
@@ -152,7 +143,7 @@ struct SmbPitchShift
 
 				/* ***************** ANALYSIS ******************* */
 				/* do transform */
-				smbFft(gFFTworksp.get(), fftFrameSize, -1);
+				smbFft(&gFFTworksp[0], fftFrameSize, -1);
 
 				/* this is the analysis step */
 				for (k = 0; k <= fftFrameSize2; k++) {
@@ -192,8 +183,8 @@ struct SmbPitchShift
 
 				/* ***************** PROCESSING ******************* */
 				/* this does the actual pitch shifting */
-				memset(gSynMagn.get(), 0, fftFrameSize*sizeof(float));
-				memset(gSynFreq.get(), 0, fftFrameSize*sizeof(float));
+				memset(&gSynMagn[0], 0, fftFrameSize*sizeof(float));
+				memset(&gSynFreq[0], 0, fftFrameSize*sizeof(float));
 				for (k = 0; k <= fftFrameSize2; k++) { 
 					index = static_cast<long>(k * pitchShift); //float to long
 					if (index <= fftFrameSize2) { 
@@ -235,7 +226,7 @@ struct SmbPitchShift
 				for (k = fftFrameSize+2; k < 2*fftFrameSize; k++) gFFTworksp[k] = 0.;
 
 				/* do inverse transform */
-				smbFft(gFFTworksp.get(), fftFrameSize, 1);
+				smbFft(&gFFTworksp[0], fftFrameSize, 1);
 
 				/* do windowing and add to output accumulator */ 
 				for(k=0; k < fftFrameSize; k++) {
@@ -245,7 +236,7 @@ struct SmbPitchShift
 				for (k = 0; k < stepSize; k++) gOutFIFO[k] = gOutputAccum[k];
 
 				/* shift accumulator */
-				std::memmove(gOutputAccum.get(), gOutputAccum.get()+stepSize, fftFrameSize*sizeof(float));
+				std::memmove(&gOutputAccum[0], &gOutputAccum[0]+stepSize, fftFrameSize*sizeof(float));
 
 				/* move input FIFO */
 				for (k = 0; k < inFifoLatency; k++) gInFIFO[k] = gInFIFO[k+stepSize];
@@ -284,7 +275,7 @@ struct SmbPitchShift
 
 	void smbFft(float *fftBuffer, long fftFrameSize, long sign)
 	{
-		fftsg::cdft<float>(2*fftFrameSize, sign, fftBuffer, fftTemp.get(), fftSinCos.get());
+		fftsg::cdft<float>(2*fftFrameSize, sign, fftBuffer, &fftTemp[0], &fftSinCos[0]);
 	}
 #else
 	/* 
