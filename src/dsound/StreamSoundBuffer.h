@@ -45,6 +45,7 @@ namespace aush{namespace dsound{
 		enum {
 			EV_CLOSE,
 			EV_PASS,
+			EV_STOPPED, //停止中の時シグナル状態。再生中の時、非シグナル状態。
 			EV_COUNT,
 		};
 		HANDLE threadControlEvents_[EV_COUNT];	//通知用イベントオブジェクトのハンドル
@@ -111,6 +112,7 @@ namespace aush{namespace dsound{
 
 		void updateSourceSize(void);
 
+		void waitForStop(void);
 	private:
 		WaveSize getDefaultLoopIn() const { return 0;}
 		WaveSize getDefaultLoopOut() const { return source_ ? source_->getTotal() : 0;}

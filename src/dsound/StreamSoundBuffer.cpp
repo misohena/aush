@@ -58,6 +58,7 @@ StreamSoundBuffer::~StreamSoundBuffer()
 
 		if(streamBuffer_){
 			streamBuffer_->Stop();
+			SetEvent(threadControlEvents_[EV_STOPPED]);
 		}
 		if(threadControlEvents_[EV_CLOSE]){
 			SetEvent(threadControlEvents_[EV_CLOSE]);
@@ -159,7 +160,8 @@ bool StreamSoundBuffer::create(const CComPtr<IDirectSound> &pds, const boost::sh
 	// イベントを作る。
 	const HANDLE evPass = CreateEvent(NULL, FALSE, FALSE, NULL);//←自動リセット, 初期状態FALSE
 	const HANDLE evClose = CreateEvent(NULL, TRUE, FALSE, NULL);//←マニュアルリセット, 初期状態FALSE
-	if(!evPass || !evClose){
+	const HANDLE evStopped = CreateEvent(NULL, TRUE, TRUE, NULL);//←マニュアルリセット, 初期状態TRUE(停止中)
+	if(!evPass || !evClose || !evStopped){
 		return false; //イベントオブジェクトが作れなかった！
 	}
 	
@@ -179,6 +181,7 @@ bool StreamSoundBuffer::create(const CComPtr<IDirectSound> &pds, const boost::sh
 	blockSize_ = blockSize;
 	threadControlEvents_[EV_PASS] = evPass;
 	threadControlEvents_[EV_CLOSE] = evClose;
+	threadControlEvents_[EV_STOPPED] = evStopped;
 	
 	//再生スレッドを作成する(↓マルチスレッドライブラリを指定してください。)
 	threadHandle_ = getThreadPool()->run(
@@ -249,6 +252,7 @@ bool StreamSoundBuffer::play(void)
 	if(FAILED(streamBuffer_->Play(0, 0, DSBPLAY_LOOPING))){
 		return false;
 	}
+	ResetEvent(threadControlEvents_[EV_STOPPED]);
 
 	return true;
 }
@@ -263,6 +267,7 @@ bool StreamSoundBuffer::playFromBeginning(void)
 
 	// 既に再生中なら停止させる
 	streamBuffer_->Stop();
+	SetEvent(threadControlEvents_[EV_STOPPED]);
 
 	// 頭出しする。ソース位置を変更してバッファをクリアする。
 	seekPlayingPosition(0); //シークできなかった場合は仕方ないのでそのまま継続で再生を試みる。
@@ -275,6 +280,7 @@ bool StreamSoundBuffer::playFromBeginning(void)
 	if(FAILED(streamBuffer_->Play(0, 0, DSBPLAY_LOOPING))){
 		return false;
 	}
+	ResetEvent(threadControlEvents_[EV_STOPPED]);
 	
 	return true;
 }
@@ -289,6 +295,7 @@ bool StreamSoundBuffer::stop(void)
 
 	// 再生中なら停止させる
 	const HRESULT hr = streamBuffer_->Stop();
+	SetEvent(threadControlEvents_[EV_STOPPED]);
 
 	return (SUCCEEDED(hr)) ? true : false;
 }
@@ -326,6 +333,7 @@ bool StreamSoundBuffer::setPositionSamples(WaveSize posSamples)
 	const bool playing = isPlaying();
 	if(playing){
 		streamBuffer_->Stop();
+		//省略 SetEvent(threadControlEvents_[EV_STOPPED]);
 	}
 
 	// シークしてバッファをクリアする。
@@ -335,6 +343,7 @@ bool StreamSoundBuffer::setPositionSamples(WaveSize posSamples)
 	if(playing){
 		fillBuffer();
 		streamBuffer_->Play(0, 0, DSBPLAY_LOOPING);
+		//省略 ResetEvent(threadControlEvents_[EV_STOPPED]);
 	}
 
 	return succeeded;
@@ -553,6 +562,7 @@ void StreamSoundBuffer::handleNotifications(void)
 					&& sourcePos_ == sourceSize_){
 
 					streamBuffer_->Stop();
+					SetEvent(threadControlEvents_[EV_STOPPED]);
 					std::cout << "stopped." << std::endl;
 					continue;
 				}
@@ -899,6 +909,17 @@ ThreadPool *StreamSoundBuffer::getThreadPool(void)
 
 
 
+/**
+ * 停止状態になるまで待ちます。
+ *
+ * すでに停止中の時は何もしません。
+ */
+void StreamSoundBuffer::waitForStop(void)
+{
+	if(threadControlEvents_[EV_STOPPED] != NULL){
+		WaitForSingleObject(threadControlEvents_[EV_STOPPED], INFINITE);
+	}
+}
 
 
 }}//namespace aush::dsound

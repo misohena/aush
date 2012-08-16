@@ -105,6 +105,10 @@ namespace aush{
 				buffer_->play();
 			}
 		}
+		void waitForStop(void)
+		{
+			buffer_->waitForStop();
+		}
 	};
 	typedef boost::shared_ptr<Sound> SoundPtr;
 
@@ -192,6 +196,11 @@ namespace aush{
 						sound->setPitchShift(1.0f/speedRatio);
 						sound->setResampleRatio(1.0f/speedRatio);
 					}
+				}
+			}
+			else if(args[0] == "sync"){
+				if(sound){
+					sound->waitForStop();
 				}
 			}
 		}

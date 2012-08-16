@@ -25,13 +25,14 @@ MeadowやNTEmacsから呼び出して使うために作りました。
 
 * Commands
 
-- open <filename>
-- close
-- play
-- stop
-- begin
-- speed <0.5~2.0>
-- quit
+- open <filename> :: ファイルを開く。
+- close :: ファイルを閉じる。
+- play :: 現在開いているファイルを再生する。
+- stop :: 再生を停止する。
+- begin :: 先頭へシークする。
+- speed <0.5~2.0> :: 倍速再生の倍率を設定する。
+- quit / q / exit / bye :: 終了する。
+- sync :: 停止するまで待つ。
 
 * 使い方
 
