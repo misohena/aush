@@ -138,9 +138,57 @@ namespace aush{
 	}
 
 
+	bool executeCommand(const std::vector<NativeString> &args, dsound::DirectSound &ds, SoundPtr &sound, float &speedRatio)
+	{
+		if(args.empty()){
+			//empty line means no operation.
+			return true;
+		}
+		if(args[0] == "q" || args[0] == "quit" || args[0] == "exit" || args[0] == "bye"){
+			return false;
+		}
+		else if(args[0] == "open" && args.size() >= 2){
+			if(SoundPtr newSound = openSound(args[1], ds, speedRatio)){
+				sound = newSound; //stop old sound buffer & release.
+			}
+		}
+		else if(args[0] == "close"){
+			sound.reset();
+		}
+		else if(args[0] == "play"){
+			if(sound){
+				sound->play();
+			}
+		}
+		else if(args[0] == "stop"){
+			if(sound){
+				sound->stop();
+			}
+		}
+		else if(args[0] == "top" || args[0] == "begin"){
+			if(sound){
+				sound->seekToBeginning();
+			}
+		}
+		else if(args[0] == "speed" && args.size() >= 2){
+			const double r = std::strtod(args[1].c_str(), NULL);
+			if(r >= 0.5 && r <= 2.0){
+				speedRatio = static_cast<float>(r);
+				if(sound){
+					sound->setPitchShift(1.0f/speedRatio);
+					sound->setResampleRatio(1.0f/speedRatio);
+				}
+			}
+		}
+		else if(args[0] == "sync"){
+			if(sound){
+				sound->waitForStop();
+			}
+		}
+		return true;
+	}
 
-
-	int main()
+	int main(int argc, NativeChar *argv[])
 	{
 		dsound::DirectSound ds;
 		if(!ds.create(::GetDesktopWindow())){
@@ -151,67 +199,43 @@ namespace aush{
 		SoundPtr sound;
 		float speedRatio = 1.0f;
 
+		// execute commands from command line arguments.
+		while(argc > 0){
+			std::vector<NativeString> args;
+			while(argc > 0){
+				const NativeString argstr = *argv;
+				--argc;
+				++argv;
+				if(argstr == AUSH_NATIVE_L(";")){
+					break;
+				}
+				args.push_back(argstr);
+			}
+			if(!executeCommand(args, ds, sound, speedRatio)){
+				return 0;
+			}
+		}
+
+		// execute commands from standard input.
 		for(;;){
 			std::string linestr;
 			std::getline(std::cin, linestr);
 			if(!std::cin){
 				break;
 			}
-			std::vector<NativeString> args = splitCmdLineArgs(linestr.c_str());
-			if(args.empty()){
-				continue;
-			}
-
-			if(args[0] == "q" || args[0] == "quit" || args[0] == "exit" || args[0] == "bye"){
+			const std::vector<NativeString> args = splitCmdLineArgs(linestr.c_str());
+			if(!executeCommand(args, ds, sound, speedRatio)){
 				break;
-			}
-			else if(args[0] == "open" && args.size() >= 2){
-				if(SoundPtr newSound = openSound(args[1], ds, speedRatio)){
-					sound = newSound; //stop old sound buffer & release.
-				}
-			}
-			else if(args[0] == "close"){
-				sound.reset();
-			}
-			else if(args[0] == "play"){
-				if(sound){
-					sound->play();
-				}
-			}
-			else if(args[0] == "stop"){
-				if(sound){
-					sound->stop();
-				}
-			}
-			else if(args[0] == "top" || args[0] == "begin"){
-				if(sound){
-					sound->seekToBeginning();
-				}
-			}
-			else if(args[0] == "speed" && args.size() >= 2){
-				const double r = std::strtod(args[1].c_str(), NULL);
-				if(r >= 0.5 && r <= 2.0){
-					speedRatio = static_cast<float>(r);
-					if(sound){
-						sound->setPitchShift(1.0f/speedRatio);
-						sound->setResampleRatio(1.0f/speedRatio);
-					}
-				}
-			}
-			else if(args[0] == "sync"){
-				if(sound){
-					sound->waitForStop();
-				}
 			}
 		}
 		return 0;
 	}
 }//namespace aush
 
-int main(int argc, char *argv[])
+int _tmain(int argc, char *argv[])
 {
 	::CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-	const int exitcode = aush::main();
+	const int exitcode = aush::main(argc - 1, argv + 1);
 	::CoUninitialize();
 	return exitcode;
 }

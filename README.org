@@ -42,6 +42,16 @@ aush.exeを実行し、コマンドを入力して下さい。
 開いたファイルを再生するには「play」です。
 再生が終わったら「stopped.」と出力されます(コマンドで止めた場合を除く)。
 
+** コマンドラインオプションからの使い方
+
+コマンドラインには ; で区切ってコマンドを並べることが出来ます。
+
+例えば、foo.oggを開いて、再生し、終了を待ち、終了するには、次のようにします。
+
+#+begin_example
+aush open foo.ogg ; play ; sync ; quit
+#+end_example
+
 * aush.el
 
 aush.elはEmacsからaushを制御するライブラリです。
